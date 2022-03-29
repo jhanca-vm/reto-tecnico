@@ -2,7 +2,8 @@ const inquirer = require('inquirer')
 const database = require('../database')
 
 class Question {
-  correct = false
+  #data
+  #answer
 
   /**
    * @param {number} level nivel de dificultad de la pregunta
@@ -10,33 +11,33 @@ class Question {
   constructor(level) {
     /**
      * Obtiene la primera pregunta del nivel establecido,
-     * ordenandolas aleatoriamente y ejecuta el metodo "ask"
+     * ordenandolas aleatoriamente
      */
     database.get(
       'SELECT * FROM questions WHERE level=? ORDER BY random()',
       [level],
-      this.ask
+      (err, row) => {
+        if (err) throw err
+        this.#data = row
+      }
     )
   }
 
-  /**
-   * Recibe la respuesta de la base de datos.
-   * Si no hay un error, reliza la pregunta
-   * y comprueba si la respuesta es correcta
-   */
-  async ask(err, { question, options, answer }) {
-    if (err) throw err
-
-    const input = await inquirer.prompt([
+  async ask() {
+    const { answer } = await inquirer.prompt([
       {
         type: 'list',
         name: 'answer',
-        message: question,
-        choices: JSON.parse(options),
+        message: this.#data.question,
+        choices: JSON.parse(this.#data.options),
       },
     ])
 
-    if (input.answer === answer) this.correct = true
+    this.#answer = answer
+  }
+
+  get correct() {
+    return this.#data.answer === this.#answer
   }
 }
 
